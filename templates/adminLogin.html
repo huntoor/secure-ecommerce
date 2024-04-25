@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Login - E-commerce Platform{% endblock %}
+{% block title %}Admin Login - E-commerce Platform{% endblock %}
 
 {% block nav %}
 <!-- Navbar -->
@@ -9,7 +9,7 @@
     <div class="container">
         <!-- Navbar brand -->
         <a class="navbar-brand me-2 fw-bolder" href="/">
-            E-commerce
+            Admin
         </a>
 
         <!-- Toggle button -->
@@ -42,8 +42,8 @@
 {% endblock %}
 
 {% block content %}
-<h2>User Login</h2>
-<form method="POST" action="/login">
+<h2>Admin Login</h2>
+<form method="POST" action="/admin_login">
     <div class="form-group">
         <label for="username">Username</label>
         <input type="text" id="username" name="username" class="form-control" required>

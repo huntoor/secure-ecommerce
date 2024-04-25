@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Login - E-commerce Platform{% endblock %}
+{% block title %}Admin Page - E-commerce Platform{% endblock %}
 
 {% block nav %}
 <!-- Navbar -->
@@ -9,7 +9,7 @@
     <div class="container">
         <!-- Navbar brand -->
         <a class="navbar-brand me-2 fw-bolder" href="/">
-            E-commerce
+            Admin Page
         </a>
 
         <!-- Toggle button -->
@@ -25,13 +25,10 @@
                     <!-- <a class="nav-link" href="/">E-commerce</a> -->
                 </li>
             </ul>
-            <!-- Left links -->
+
             <div class="d-flex align-items-center">
-                <a data-mdb-ripple-init type="button" class="btn btn-link px-3 me-2" href="login.html">
-                    Login
-                </a>
-                <a data-mdb-ripple-init type="button" class="btn btn-primary me-3" href="/register">
-                    Sign up for free
+                <a data-mdb-ripple-init type="button" class="btn btn-danger me-3" href="/logout">
+                    Logout
                 </a>
             </div>
         </div>
@@ -42,16 +39,32 @@
 {% endblock %}
 
 {% block content %}
-<h2>User Login</h2>
-<form method="POST" action="/login">
+<h2>Admin Dashboard</h2>
+
+<h3>Users</h3>
+<ul>
+    {% for user in users %}
+    <li>{{ user[1] }} (ID: {{ user[0] }})(Type: {% if user[2] == 1 %}Admin{% else %}User{% endif %})</li>
+    {% endfor %}
+</ul>
+
+<h3>Add a New Product</h3>
+<form action="/add_product" method="POST">
+    <label for="product_name">Product Name:</label>
+    <input type="text" id="product_name" name="product_name" required><br>
+    <label for="price">Price:</label>
+    <input type="text" id="price" name="price" required><br>
+    <input type="submit" value="Add Product">
+</form>
+<form method="POST" action="/add_product">
     <div class="form-group">
-        <label for="username">Username</label>
-        <input type="text" id="username" name="username" class="form-control" required>
+        <label for="product_name">Product Name</label>
+        <input type="text" id="product_name" name="product_name" class="form-control" required>
     </div>
     <div class="form-group">
-        <label for="password">Password</label>
-        <input type="password" id="password" name="password" class="form-control" required>
+        <label for="price">price</label>
+        <input type="text" id="price" name="price" class="form-control" required>
     </div>
-    <button type="submit" class="btn btn-primary">Login</button>
+    <button type="submit" class="btn btn-primary">Add Product</button>
 </form>
 {% endblock %}

@@ -129,14 +129,14 @@ def login():
 @app.route('/add_product', methods=['GET', 'POST'])
 @admin_required
 def add_product():
-    if request.method == 'GET':
-        return render_template('addProducts.html')
+    # if request.method == 'GET':
+    #     return render_template('addProducts.html')
     
     # data = request.get_json()
     # product_name = data['product_name']
     # price = data['price']
-    product_name = request.form('product_name')
-    price = request.form('price')
+    product_name = request.form['product_name']
+    price = request.form['price']
     
     conn = create_connection()
     create_product_table(conn)
@@ -189,17 +189,16 @@ def promote_to_admin():
     return jsonify({'message': f'{username} promoted to admin successfully'}), 200
 
 # Dummy route for admin login (replace with actual authentication mechanism)
-@app.route('/admin_login', methods=['GET, POST'])
+@app.route('/admin_login', methods=['GET', 'POST'])
 def admin_login():
     if request.method == 'GET':
         return render_template('adminLogin.html')
     
-
     # data = request.get_json()
     # username = data['username']
     # password = data['password']
-    username = request.form('username')
-    password = request.form('password')
+    username = request.form['username']
+    password = request.form['password']
     
     user = authenticate_user(username, password)
     if user and user[3] == 1:  # Check if the user is an admin (is_admin == 1)
@@ -207,6 +206,18 @@ def admin_login():
         return jsonify({'message': 'Admin login successful'}), 200
     else:
         return jsonify({'error': 'Invalid credentials or not an admin'}), 401
+    
+@app.route('/admin_page', methods=['GET'])
+@admin_required
+def admin_page():
+    conn = create_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, username, is_admin FROM User")
+    users = cursor.fetchall()
+    conn.close()
+
+    return render_template('adminPage.html', users=users)
+
     
 @app.route('/logout', methods=['GET', 'POST'])
 def logout():

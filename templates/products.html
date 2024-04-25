@@ -2,11 +2,60 @@
 
 {% block title %}Products - E-commerce Platform{% endblock %}
 
+
+{% block nav %}
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-light bg-body-tertiary mb-5">
+    <!-- Container wrapper -->
+    <div class="container">
+        <!-- Navbar brand -->
+        <a class="navbar-brand me-2 fw-bolder" href="/">
+            E-commerce
+        </a>
+
+        <!-- Toggle button -->
+        <button data-mdb-collapse-init class="navbar-toggler" type="button" data-mdb-target="#navbarButtonsExample"
+            aria-controls="navbarButtonsExample" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="fas fa-bars"></i>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarButtonsExample">
+            <!-- Left links -->
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <!-- <a class="nav-link" href="/">E-commerce</a> -->
+                </li>
+            </ul>
+            <!-- Left links -->
+            <div class="d-flex align-items-center">
+                <a data-mdb-ripple-init type="button" class="btn btn-danger me-3" href="/logout">
+                    Logout
+                </a>
+            </div>
+        </div>
+    </div>
+    <!-- Container wrapper -->
+</nav>
+<!-- Navbar -->
+{% endblock %}
+
 {% block content %}
 <h2>Products</h2>
 <ul>
+    <div class="row">
     {% for product in products %}
-    <li>{{ product.product_name }} - ${{ product.price }}</li>
-    {% endfor %}
+    <!-- <li>{{ product.product_name }} - ${{ product.price }}</li> -->
+
+        <div class="col-sm-6 mb-3">
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title">{{ product.product_name }}</h5>
+              <p class="card-text">${{ product.price }}</p>
+              <a href="#" class="btn btn-primary">Buy</a>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+    </div>
 </ul>
 {% endblock %}
