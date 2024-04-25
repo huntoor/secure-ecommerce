@@ -1,0 +1,48 @@
+# from flask import Flask, request, session, redirect, url_for
+# from db_utils import create_connection, hash_password, create_user_table
+# import config
+
+# app = Flask(__name__)
+# app.secret_key = config.SECRET_KEY
+
+# @app.route('/')
+# def index():
+#     return 'Welcome to the secure e-commerce platform!'
+
+# @app.route('/register', methods=['POST'])
+# def register():
+#     username = request.form['username']
+#     password = hash_password(request.form['password'])
+#     conn = create_connection()
+#     create_user_table(conn)
+#     cursor = conn.cursor()
+#     try:
+#         cursor.execute("INSERT INTO User (username, password) VALUES (?, ?)", (username, password))
+#         conn.commit()
+#         return 'Registered successfully'
+#     except Exception as e:
+#         return str(e)
+#     finally:
+#         conn.close()
+
+# @app.route('/login', methods=['POST'])
+# def login():
+#     username = request.form['username']
+#     password = request.form['password']
+#     conn = create_connection()
+#     cursor = conn.cursor()
+#     cursor.execute("SELECT * FROM User WHERE username = ?", (username,))
+#     user = cursor.fetchone()
+#     conn.close()
+#     if user and user[2] == hash_password(password):
+#         session['user_id'] = user[0]
+#         return 'Logged in successfully'
+#     return 'Invalid credentials'
+
+# @app.route('/logout')
+# def logout():
+#     session.pop('user_id', None)
+#     return redirect(url_for('index'))
+
+# if __name__ == '__main__':
+#     app.run(debug=True)
