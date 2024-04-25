@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, redirect, render_template, request, jsonify, session
 import sqlite3
 import hashlib
 from functools import wraps
@@ -68,50 +68,75 @@ def admin_required(f):
         return jsonify({'error': 'Admin privileges required'}), 403  # Forbidden
     return decorated_function
 
+def is_logged_in():
+    if 'user_id' in session:
+        return True
+    return False
+
+@app.route('/')
+def index():
+    if is_logged_in():
+        return redirect('/products')
+    else:
+        return redirect('/login')
+    
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    if request.method == 'POST':
-        # data = request.get_json()
-        # username = data['username']
-        # password = hash_password(data['password'])
-
-        username = request.form['username']
-        password = hash_password(request.form['password'])
-
-        conn = create_connection()
-        create_user_table(conn)
-        cursor = conn.cursor()
-        query = "INSERT INTO User (username, password) VALUES (?, ?)"
-        try:
-            cursor.execute(query, (username, password))
-            conn.commit()
-        except sqlite3.IntegrityError:
-            conn.close()
-            return jsonify({'error': 'Username already exists'}), 409
-        conn.close()
-        return jsonify({'message': 'User registered successfully'}), 201
-    elif request.method == 'GET':
+    if request.method == 'GET':
         return render_template('register.html')
+    
+    # data = request.get_json()
+    # username = data['username']
+    # password = hash_password(data['password'])
 
-@app.route('/login', methods=['POST'])
+    username = request.form['username']
+    password = hash_password(request.form['password'])
+
+    conn = create_connection()
+    create_user_table(conn)
+    cursor = conn.cursor()
+    query = "INSERT INTO User (username, password) VALUES (?, ?)"
+    try:
+        cursor.execute(query, (username, password))
+        conn.commit()
+    except sqlite3.IntegrityError:
+        conn.close()
+        return jsonify({'error': 'Username already exists'}), 409
+    conn.close()
+    return jsonify({'message': 'User registered successfully'}), 201
+
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    data = request.get_json()
-    username = data['username']
-    password = data['password']
+    if request.method == 'GET':
+        return render_template('login.html')
+    
+    # data = request.get_json()
+    # username = data['username']
+    # password = data['password']
+
+    username = request.form['username']
+    password = request.form['password']
     
     user = authenticate_user(username, password)
+
     if user:
         session['user_id'] = user[0]  # Store user ID in session upon successful login
         return jsonify({'message': 'Login successful'}), 200
     else:
         return jsonify({'error': 'Invalid credentials'}), 401
 
-@app.route('/add_product', methods=['POST'])
+@app.route('/add_product', methods=['GET', 'POST'])
 @admin_required
 def add_product():
-    data = request.get_json()
-    product_name = data['product_name']
-    price = data['price']
+    if request.method == 'GET':
+        return render_template('addProducts.html')
+    
+    # data = request.get_json()
+    # product_name = data['product_name']
+    # price = data['price']
+    product_name = request.form('product_name')
+    price = request.form('price')
     
     conn = create_connection()
     create_product_table(conn)
@@ -126,6 +151,8 @@ def add_product():
 
 @app.route('/products', methods=['GET'])
 def list_products():
+    if not is_logged_in():
+        return redirect('/login')
     conn = create_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM Product")
@@ -162,11 +189,17 @@ def promote_to_admin():
     return jsonify({'message': f'{username} promoted to admin successfully'}), 200
 
 # Dummy route for admin login (replace with actual authentication mechanism)
-@app.route('/admin_login', methods=['POST'])
+@app.route('/admin_login', methods=['GET, POST'])
 def admin_login():
-    data = request.get_json()
-    username = data['username']
-    password = data['password']
+    if request.method == 'GET':
+        return render_template('adminLogin.html')
+    
+
+    # data = request.get_json()
+    # username = data['username']
+    # password = data['password']
+    username = request.form('username')
+    password = request.form('password')
     
     user = authenticate_user(username, password)
     if user and user[3] == 1:  # Check if the user is an admin (is_admin == 1)
@@ -175,7 +208,7 @@ def admin_login():
     else:
         return jsonify({'error': 'Invalid credentials or not an admin'}), 401
     
-@app.route('/logout', methods=['POST'])
+@app.route('/logout', methods=['GET', 'POST'])
 def logout():
     session.pop('user_id', None)  # Remove the user's ID from the session
     return jsonify({'message': 'You have been logged out successfully'}), 200
