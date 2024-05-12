@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Shopping Cart - E-commerce Platform{% endblock %}
+
+{% block content %}
+<h2>Shopping Cart</h2>
+
+{% if products %}
+<div class="row">
+    {% for item in products %}
+    <div class="col-sm-6 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">{{ item.product_name }}</h5>
+                <p class="card-text">Quantity: {{ item.quantity }}</p>
+                <p class="card-text">Price: ${{ item.price }}</p>
+                <!-- <button class="btn btn-danger" onclick="removeFromCart('{{ item.product_id }}')">Remove</button> -->
+                <form action="/remove_from_cart" method="post">
+                    <input type="hidden" name="product_id" value="{{ item.product_id }}">
+                    <button class="btn btn-danger" type="submit">Remove<i class="fa-solid fa-trash ms-2"></i>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="mt-4">
+    <h4>Total: ${{ total_cost }}</h4>
+    <a href="/checkout" class="btn btn-primary">Proceed to Checkout</a>
+</div>
+
+{% else %}
+<p>Your shopping cart is empty.</p>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function removeFromCart(productId) {
+        // You can implement logic here to remove the item with productId from the cart
+        // This can involve making an AJAX request to the server to update the cart
+        console.log("Removing product with ID: " + productId);
+    }
+</script>
+{% endblock %}

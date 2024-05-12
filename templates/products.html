@@ -2,7 +2,6 @@
 
 {% block title %}Products - E-commerce Platform{% endblock %}
 
-
 {% block nav %}
 <!-- Navbar -->
 <nav class="navbar navbar-expand-lg navbar-light bg-body-tertiary mb-5">
@@ -28,6 +27,9 @@
             </ul>
             <!-- Left links -->
             <div class="d-flex align-items-center">
+                <a data-mdb-ripple-init type="button" class="btn me-3" href="/cart">
+                    Cart <i class="fa-solid fa-cart-shopping"></i>
+                </a>
                 <a data-mdb-ripple-init type="button" class="btn btn-danger me-3" href="/logout">
                     Logout
                 </a>
@@ -41,21 +43,23 @@
 
 {% block content %}
 <h2>Products</h2>
-<ul>
-    <div class="row">
+<ul class="row">
     {% for product in products %}
-    <!-- <li>{{ product.product_name }} - ${{ product.price }}</li> -->
-
-        <div class="col-sm-6 mb-3">
-          <div class="card">
+    <li class="col-sm-6 mb-3">
+        <div class="card">
             <div class="card-body">
-              <h5 class="card-title">{{ product.product_name }}</h5>
-              <p class="card-text">${{ product.price }}</p>
-              <a href="#" class="btn btn-primary">Buy</a>
+                <h5 class="card-title">{{ product.product_name }}</h5>
+                <p class="card-text">${{ product.price }}</p>
+                <!-- Form to add product to cart -->
+                <form method="POST" action="/add_to_cart">
+                    <input type="hidden" name="product_id" value="{{ product.product_id }}">
+                    <label for="quantity">Quantity:</label>
+                    <input type="number" id="quantity" name="quantity" value="1" min="1">
+                    <button type="submit" class="btn btn-primary">Buy</button>
+                </form>
             </div>
-          </div>
         </div>
-        {% endfor %}
-    </div>
+    </li>
+    {% endfor %}
 </ul>
 {% endblock %}

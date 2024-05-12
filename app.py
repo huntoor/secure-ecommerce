@@ -345,6 +345,112 @@ def logout():
     session.pop('user_id', None)  # Remove the user's ID from the session
     return jsonify({'message': 'You have been logged out successfully'}), 200
 
+# Cart
+@app.route('/add_to_cart', methods=['POST'])
+def add_to_cart():
+    if not is_logged_in():
+        return redirect('/login')
+    
+    product_id = request.form.get('product_id')
+    quantity = int(request.form.get('quantity', 1))  # Default to 1 if not specified
+    
+    if not product_id or quantity < 1:
+        return jsonify({'error': 'Invalid product or quantity'}), 400
+    
+    cart = session.get('cart', {})
+    if product_id in cart:
+        cart[product_id] += quantity
+    else:
+        cart[product_id] = quantity
+    
+    session['cart'] = cart
+    return jsonify({'message': 'Product added to cart'}), 200
+
+@app.route('/cart', methods=['GET'])
+def view_cart():
+    if not is_logged_in():
+        return redirect('/login')
+    
+    cart = session.get('cart', {})
+    conn = create_connection()
+    cursor = conn.cursor()
+    products = []
+    total_cost = 0
+    
+    for product_id, quantity in cart.items():
+        cursor.execute("SELECT id, product_name, price FROM Product WHERE id = ?", (product_id,))
+        product_data = cursor.fetchone()
+        if product_data:
+            total = product_data[2] * quantity
+            products.append({
+                'product_id': product_data[0],
+                'product_name': decrypt_text(product_data[1]),
+                'price': product_data[2],
+                'quantity': quantity,
+                'total': total
+            })
+            total_cost += total
+
+    conn.close()
+    return render_template('cart.html', products=products, total_cost=total_cost)
+
+@app.route('/remove_from_cart', methods=['POST'])
+def remove_from_cart():
+    if not is_logged_in():
+        return redirect('/login')
+    
+    product_id = request.form.get('product_id')
+    if not product_id or product_id not in session.get('cart', {}):
+        return jsonify({'error': 'Product not in cart'}), 400
+    
+    del session['cart'][product_id]
+    return jsonify({'message': 'Product removed from cart'}), 200
+
+# Checkout
+@app.route('/checkout')
+def checkout():
+    if not is_logged_in():
+        return redirect('/login')
+    
+    cart = session.get('cart', {})
+    if not cart:
+        return redirect('/cart')  # Redirect to cart if empty
+
+    conn = create_connection()
+    cursor = conn.cursor()
+    products = []
+    total_cost = 0
+    
+    for product_id, quantity in cart.items():
+        cursor.execute("SELECT id, product_name, price FROM Product WHERE id = ?", (product_id,))
+        product_data = cursor.fetchone()
+        if product_data:
+            total = product_data[2] * quantity
+            products.append({
+                'product_id': product_data[0],
+                'product_name': decrypt_text(product_data[1]),
+                'price': product_data[2],
+                'quantity': quantity,
+                'total': total
+            })
+            total_cost += total
+
+    conn.close()
+    
+    return render_template('checkout.html', products=products, total_cost=total_cost)
+
+@app.route('/confirm', methods=['POST'])
+def confirm():
+    if not is_logged_in():
+        return redirect('/login')
+
+    # real payment processing with validation should be added
+    # For now, we'll assume payment is always successful
+
+    session.pop('cart', None)  # Clear the cart
+
+    return jsonify({'message': 'Payment confirmed. Thank you for your purchase!'}), 200
+
 
 if __name__ == '__main__':
     app.run(debug=True)
