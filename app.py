@@ -3,14 +3,23 @@ from flask import Flask, redirect, render_template, request, jsonify, session
 import sqlite3
 import hashlib
 from functools import wraps
+import re
+# from cryptography.fernet import Fernet
+from Crypto.Cipher import AES
+import hashlib
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'
+app.secret_key = '5kh6tuPxap'
+key = 'C2y<]UcS2yBuNK8'
 
 current_directory = os.path.dirname(os.path.abspath(__file__))
 database_path = os.path.join(current_directory, 'test.db')
-templates = os.path.join(current_directory, 'register.html')
-print(templates+"\\register")
+# templates = os.path.join(current_directory, 'register.html')
+# print(templates+"\\register")
+
+# key = Fernet.generate_key()
+# cipher_suite = Fernet(key)
+
 
 def create_connection():
     return sqlite3.connect(database_path)
@@ -41,10 +50,50 @@ def create_product_table(conn):
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
+def validate_username(username):
+    # Validate username format (alphanumeric characters and underscore, 3-20 characters)
+    return re.match(r'^[a-zA-Z0-9_]{3,20}$', username)
+
+def validate_password(password):
+    # Validate password format (at least 8 characters including lowercase, uppercase, and digits)
+    return re.match(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$', password)
+
+# def encrypt_text(plain_text):
+#     if plain_text is not None:
+#         encrypted_text = cipher_suite.encrypt(plain_text.encode())
+#         return encrypted_text
+#     return None
+
+# def decrypt_text(encrypted_text):
+#     if encrypted_text is not None:
+#         decrypted_text = cipher_suite.decrypt(encrypted_text).decode()
+#         return decrypted_text
+#     return None
+
+def pad(s):
+    return s + (AES.block_size - len(s) % AES.block_size) * chr(AES.block_size - len(s) % AES.block_size)
+
+def unpad(s):
+    return s[:-ord(s[len(s) - 1:])]
+
+def encrypt_text(plain_text):
+    key_hash = hashlib.sha256(key.encode()).digest()[:16]  # Ensure the key is 16 bytes
+    cipher = AES.new(key_hash, AES.MODE_ECB)
+    padded_text = pad(plain_text)
+    encrypted_text = cipher.encrypt(padded_text.encode())
+    return encrypted_text.hex()
+
+def decrypt_text(encrypted_text):
+    key_hash = hashlib.sha256(key.encode()).digest()[:16]  # Ensure the key is 16 bytes
+    cipher = AES.new(key_hash, AES.MODE_ECB)
+    padded_plaintext = cipher.decrypt(bytes.fromhex(encrypted_text))
+    return unpad(padded_plaintext.decode())
+
 def authenticate_user(username, password):
     conn = create_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM User WHERE username = ?", (username,))
+    encrypted_username = encrypt_text(username)
+    cursor.execute("SELECT * FROM User WHERE username = ?", (encrypted_username,))
     user = cursor.fetchone()
     conn.close()
     
@@ -57,21 +106,34 @@ def admin_required(f):
     def decorated_function(*args, **kwargs):
         if 'user_id' in session:
             user_id = session['user_id']
-            conn = create_connection()
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM User WHERE id = ?", (user_id,))
-            user = cursor.fetchone()
-            conn.close()
+            conn = None
+            try:
+                conn = create_connection()
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM User WHERE id = ?", (user_id,))
+                user = cursor.fetchone()
 
-            if user and user[3] == 1:  # Check if the user is an admin (is_admin == 1)
-                return f(*args, **kwargs)
-        return jsonify({'error': 'Admin privileges required'}), 403  # Forbidden
+                if user:
+                    if user[3] == 1:  # Check if the user is an admin
+                        return f(*args, **kwargs)
+                    else:
+                        return jsonify({'error': 'Admin privileges required'}), 403
+                else:
+                    return jsonify({'error': 'User not found'}), 404  # User ID not found
+            except Exception as e:
+                return jsonify({'error': 'Server error', 'message': str(e)}), 500  # Handle unexpected errors gracefully
+            finally:
+                if conn:
+                    conn.close()
+        else:
+            return jsonify({'error': 'Authentication required'}), 401  # No user_id in session
+
     return decorated_function
 
+
 def is_logged_in():
-    if 'user_id' in session:
-        return True
-    return False
+    return 'user_id' in session
+
 
 @app.route('/')
 def index():
@@ -83,6 +145,9 @@ def index():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+    if is_logged_in():
+        return redirect('/products')
+    
     if request.method == 'GET':
         return render_template('register.html')
     
@@ -91,14 +156,24 @@ def register():
     # password = hash_password(data['password'])
 
     username = request.form['username']
-    password = hash_password(request.form['password'])
+    password = request.form['password']
+
+    if not validate_username(username):
+        return jsonify({'error': 'Invalid username format'}), 400
+    
+    if not validate_password(password):
+        return jsonify({'error': 'Invalid password format'}), 400
+    
+    encrypted_username = encrypt_text(username)
+    hashed_password = hash_password(password)
+
 
     conn = create_connection()
     create_user_table(conn)
     cursor = conn.cursor()
     query = "INSERT INTO User (username, password) VALUES (?, ?)"
     try:
-        cursor.execute(query, (username, password))
+        cursor.execute(query, (encrypted_username, hashed_password))
         conn.commit()
     except sqlite3.IntegrityError:
         conn.close()
@@ -108,6 +183,9 @@ def register():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    if is_logged_in():
+        return redirect('/products')
+    
     if request.method == 'GET':
         return render_template('login.html')
     
@@ -117,6 +195,12 @@ def login():
 
     username = request.form['username']
     password = request.form['password']
+
+    if not validate_username(username):
+        return jsonify({'error': 'Invalid username format'}), 400
+
+    if not validate_password(password):
+        return jsonify({'error': 'Invalid password format'}), 400
     
     user = authenticate_user(username, password)
 
@@ -125,72 +209,12 @@ def login():
         return jsonify({'message': 'Login successful'}), 200
     else:
         return jsonify({'error': 'Invalid credentials'}), 401
-
-@app.route('/add_product', methods=['GET', 'POST'])
-@admin_required
-def add_product():
-    # if request.method == 'GET':
-    #     return render_template('addProducts.html')
     
-    # data = request.get_json()
-    # product_name = data['product_name']
-    # price = data['price']
-    product_name = request.form['product_name']
-    price = request.form['price']
-    
-    conn = create_connection()
-    create_product_table(conn)
-    cursor = conn.cursor()
-    query = "INSERT INTO Product (product_name, price) VALUES (?, ?)"
-    try:
-        cursor.execute(query, (product_name, price))
-        conn.commit()
-    finally:
-        conn.close()
-    return jsonify({'message': 'Product added successfully'}), 201
-
-@app.route('/products', methods=['GET'])
-def list_products():
-    if not is_logged_in():
-        return redirect('/login')
-    conn = create_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM Product")
-    products = cursor.fetchall()
-    conn.close()
-
-    product_list = []
-    for product in products:
-        product_dict = {
-            'product_id': product[0],
-            'product_name': product[1],
-            'price': product[2]
-        }
-        product_list.append(product_dict)
-
-    # Render the template with the product list
-    return render_template('products.html', products=product_list)
-
-
-@app.route('/promote_to_admin', methods=['POST'])
-@admin_required
-def promote_to_admin():
-    data = request.get_json()
-    username = data['username']
-    
-    conn = create_connection()
-    cursor = conn.cursor()
-    query = "UPDATE User SET is_admin = 1 WHERE username = ?"
-    try:
-        cursor.execute(query, (username,))
-        conn.commit()
-    finally:
-        conn.close()
-    return jsonify({'message': f'{username} promoted to admin successfully'}), 200
-
-# Dummy route for admin login (replace with actual authentication mechanism)
 @app.route('/admin_login', methods=['GET', 'POST'])
 def admin_login():
+    if is_logged_in():
+        return redirect('/products')
+    
     if request.method == 'GET':
         return render_template('adminLogin.html')
     
@@ -199,7 +223,14 @@ def admin_login():
     # password = data['password']
     username = request.form['username']
     password = request.form['password']
+
+    if not validate_username(username):
+        return jsonify({'error': 'Invalid username format'}), 400
+
+    if not validate_password(password):
+        return jsonify({'error': 'Invalid password format'}), 400
     
+
     user = authenticate_user(username, password)
     if user and user[3] == 1:  # Check if the user is an admin (is_admin == 1)
         session['user_id'] = user[0]  # Store user ID in session upon successful login
@@ -216,8 +247,98 @@ def admin_page():
     users = cursor.fetchall()
     conn.close()
 
-    return render_template('adminPage.html', users=users)
+    decrypted_users = []
+    for user in users:
+        decrypted_user = (
+            user[0],
+            decrypt_text(user[1]),  # Decrypting the username
+            user[2]
+        )
+        decrypted_users.append(decrypted_user)
 
+    return render_template('adminPage.html', users=decrypted_users)
+
+@app.route('/promote_to_admin', methods=['POST'])
+def promote_to_admin():
+    # data = request.get_json()
+    # username = data['username']
+
+    username = request.form['username']
+    encrypted_username = encrypt_text(username)
+    
+    conn = create_connection()
+    cursor = conn.cursor()
+    query = "UPDATE User SET is_admin = 1 WHERE username = ?"
+    try:
+        cursor.execute(query, (encrypted_username,))
+        conn.commit()
+    finally:
+        conn.close()
+    return jsonify({'message': f'{username} promoted to admin successfully'}), 200
+
+@app.route('/demote_from_admin', methods=['POST'])
+@admin_required
+def demote_from_admin():
+    username = request.form['username']
+    encrypted_username = encrypt_text(username)
+    
+    conn = create_connection()
+    cursor = conn.cursor()
+    query = "UPDATE User SET is_admin = 0 WHERE username = ?"
+    try:
+        cursor.execute(query, (encrypted_username,))
+        conn.commit()
+    finally:
+        conn.close()
+    return jsonify({'message': f'{username} demoted from admin successfully'}), 200
+
+@app.route('/add_product', methods=['GET', 'POST'])
+@admin_required
+def add_product():
+    # if request.method == 'GET':
+    #     return render_template('addProducts.html')
+    
+    # data = request.get_json()
+    # product_name = data['product_name']
+    # price = data['price']
+    product_name = request.form['product_name']
+    price = request.form['price']
+
+    encrypted_product_name = encrypt_text(product_name)
+    
+    conn = create_connection()
+    create_product_table(conn)
+    cursor = conn.cursor()
+    query = "INSERT INTO Product (product_name, price) VALUES (?, ?)"
+    try:
+        cursor.execute(query, (encrypted_product_name, price))
+        conn.commit()
+    finally:
+        conn.close()
+    return jsonify({'message': 'Product added successfully'}), 201
+
+@app.route('/products', methods=['GET'])
+def list_products():
+    if not is_logged_in():
+        return redirect('/login')
+    conn = create_connection()
+    cursor = conn.cursor()
+    create_product_table(conn)
+    cursor.execute("SELECT * FROM Product")
+    products = cursor.fetchall()
+    conn.close()
+
+    product_list = []
+    for product in products:
+        product_dict = {
+            'product_id': product[0],
+            'product_name': decrypt_text(product[1]),
+            'price': product[2]
+        }
+        product_list.append(product_dict)
+
+    # Render the template with the product list
+    return render_template('products.html', products=product_list)
     
 @app.route('/logout', methods=['GET', 'POST'])
 def logout():

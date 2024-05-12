@@ -5,35 +5,35 @@
 {% block nav %}
 <!-- Navbar -->
 <nav class="navbar navbar-expand-lg navbar-light bg-body-tertiary mb-5">
-    <!-- Container wrapper -->
-    <div class="container">
-        <!-- Navbar brand -->
-        <a class="navbar-brand me-2 fw-bolder" href="/">
-            Admin Page
+  <!-- Container wrapper -->
+  <div class="container">
+    <!-- Navbar brand -->
+    <a class="navbar-brand me-2 fw-bolder" href="/">
+      Admin Page
+    </a>
+
+    <!-- Toggle button -->
+    <button data-mdb-collapse-init class="navbar-toggler" type="button" data-mdb-target="#navbarButtonsExample"
+      aria-controls="navbarButtonsExample" aria-expanded="false" aria-label="Toggle navigation">
+      <i class="fas fa-bars"></i>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarButtonsExample">
+      <!-- Left links -->
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item">
+          <!-- <a class="nav-link" href="/">E-commerce</a> -->
+        </li>
+      </ul>
+
+      <div class="d-flex align-items-center">
+        <a data-mdb-ripple-init type="button" class="btn btn-danger me-3" href="/logout">
+          Logout
         </a>
-
-        <!-- Toggle button -->
-        <button data-mdb-collapse-init class="navbar-toggler" type="button" data-mdb-target="#navbarButtonsExample"
-            aria-controls="navbarButtonsExample" aria-expanded="false" aria-label="Toggle navigation">
-            <i class="fas fa-bars"></i>
-        </button>
-
-        <div class="collapse navbar-collapse" id="navbarButtonsExample">
-            <!-- Left links -->
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                <li class="nav-item">
-                    <!-- <a class="nav-link" href="/">E-commerce</a> -->
-                </li>
-            </ul>
-
-            <div class="d-flex align-items-center">
-                <a data-mdb-ripple-init type="button" class="btn btn-danger me-3" href="/logout">
-                    Logout
-                </a>
-            </div>
-        </div>
+      </div>
     </div>
-    <!-- Container wrapper -->
+  </div>
+  <!-- Container wrapper -->
 </nav>
 <!-- Navbar -->
 {% endblock %}
@@ -43,66 +43,55 @@
 
 <h3>Users</h3>
 <ul>
-    <div class="row">
+  <div class="row">
     {% for user in users %}
-        <div class="col-xl-6 mb-4">
-          <div class="card">
-            <div class="card-body">
-              <div class="d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center">
-                  <div class="ms-3">
-                    <p class="fw-bold mb-1">{{ user[1] }}</p>
-                    <p class="text-muted mb-0">{% if user[2] == 1 %}Admin{% else %}User{% endif %}</p>
-                  </div>
-                </div>
+    <div class="col-xl-6 mb-4">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+              <div class="ms-3">
+                <p class="fw-bold mb-1">{{ user[1] }}</p>
+                <p class="text-muted mb-0">{% if user[2] == 1 %}Admin{% else %}User{% endif %}</p>
               </div>
             </div>
-            <div
-              class="card-footer border-0 bg-body-tertiary p-2 d-flex justify-content-around"
-            >
-              <a
-                class="btn btn-link m-0 text-reset"
-                href="#"
-                role="button"
-                data-ripple-color="primary"
-                data-mdb-ripple-init
-                >Delete<i class="fa-solid fa-trash ms-2"></i></a>
-
-                {% if user[2] == 1 %}
-                <a
-                class="btn btn-link m-0 text-reset"
-                href="#"
-                role="button"
-                data-ripple-color="primary"
-                data-mdb-ripple-init
-                >Demote<i class="fa-solid fa-lock ms-2"></i></a>
-                {% else %}
-                <a
-                class="btn btn-link m-0 text-reset"
-                href="#"
-                role="button"
-                data-ripple-color="primary"
-                data-mdb-ripple-init
-                >Promote<i class="fa-solid fa-unlock-keyhole ms-2"></i></a>
-                {% endif %}
-
-            </div>
           </div>
-        </div>  
-        {% endfor %}
+        </div>
+        <div class="card-footer border-0 bg-body-tertiary p-2 d-flex justify-content-around">
+          <a class="btn btn-link m-0 text-reset" href="#" role="button" data-ripple-color="primary"
+            data-mdb-ripple-init>Delete<i class="fa-solid fa-trash ms-2"></i></a>
+
+          {% if user[2] == 1 %}
+          <form action="/demote_from_admin" method="post">
+            <input type="hidden" name="username" value="{{ user[1] }}">
+            <button class="btn btn-link m-0 text-reset" type="submit">Demote<i
+                class="fa-solid fa-lock ms-2"></i></button>
+          </form>
+          {% else %}
+          <form action="/promote_to_admin" method="post">
+            <input type="hidden" name="username" value="{{ user[1] }}">
+            <button class="btn btn-link m-0 text-reset" type="submit">Promote<i
+                class="fa-solid fa-unlock-keyhole ms-2"></i></button>
+          </form>
+          {% endif %}
+
+        </div>
+      </div>
     </div>
+    {% endfor %}
+  </div>
 </ul>
 
 <h3>Add a New Product</h3>
 <form method="POST" action="/add_product" class="mb-5">
-    <div class="form-group">
-        <label for="product_name">Product Name</label>
-        <input type="text" id="product_name" name="product_name" class="form-control" required>
-    </div>
-    <div class="form-group">
-        <label for="price">price</label>
-        <input type="text" id="price" name="price" class="form-control" required>
-    </div>
-    <button type="submit" class="btn btn-primary">Add Product</button>
+  <div class="form-group">
+    <label for="product_name">Product Name</label>
+    <input type="text" id="product_name" name="product_name" class="form-control" required>
+  </div>
+  <div class="form-group">
+    <label for="price">price</label>
+    <input type="text" id="price" name="price" class="form-control" required>
+  </div>
+  <button type="submit" class="btn btn-primary">Add Product</button>
 </form>
 {% endblock %}
